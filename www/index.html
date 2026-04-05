@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#0d1117">
+  <title>Küchen-Timer</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="app">
+
+    <!-- ── Header ─────────────────────────────────────────── -->
+    <header class="app-header">
+      <h1 class="app-title">⏱ Küchen-Timer</h1>
+      <button class="btn btn-outline btn-sm" onclick="openNewPresetModal()">+ Timer speichern</button>
+    </header>
+
+    <!-- ── Main content: 2-column layout ─────────────────── -->
+    <div class="content">
+
+      <!-- LEFT: Active timer display -->
+      <section class="active-timer-section">
+        <div class="timer-card" id="timerCard">
+          <div class="timer-label" id="timerLabel">Kein Timer aktiv</div>
+          <div class="timer-display" id="timerDisplay">00:00</div>
+          <div class="progress-container">
+            <div class="progress-bar" id="progressBar" style="width:100%"></div>
+          </div>
+
+          <div class="timer-controls">
+            <button class="btn btn-primary btn-large" id="btnStartPause" onclick="toggleStartPause()">
+              ▶ Start
+            </button>
+            <button class="btn btn-secondary btn-large" id="btnReset" onclick="resetTimer()">
+              ↺ Reset
+            </button>
+          </div>
+
+          <div class="extend-controls">
+            <span class="extend-label">Verlängern:</span>
+            <button class="btn btn-extend" onclick="extendTimer(60)">+1 Min</button>
+            <button class="btn btn-extend" onclick="extendTimer(300)">+5 Min</button>
+            <button class="btn btn-extend" onclick="extendTimer(600)">+10 Min</button>
+            <button class="btn btn-extend" onclick="extendTimer(1800)">+30 Min</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- RIGHT: Presets + Custom timer -->
+      <div class="right-panel">
+
+        <!-- Saved presets -->
+        <section class="presets-section">
+          <div class="section-header">
+            <h2 class="section-title">Gespeicherte Timer</h2>
+          </div>
+          <div class="presets-grid" id="presetsGrid">
+            <!-- Rendered by JavaScript -->
+          </div>
+        </section>
+
+        <!-- Custom / free timer -->
+        <section class="custom-timer-section">
+          <h2 class="section-title">Freier Timer</h2>
+          <div class="custom-timer-form">
+            <input
+              type="text"
+              class="text-input"
+              id="customName"
+              placeholder="Timer-Name (optional)"
+              maxlength="40"
+              autocomplete="off"
+            >
+            <div class="time-picker">
+              <div class="time-unit">
+                <button class="btn-stepper" onclick="adjustTime('customHours', 1, 23)">▲</button>
+                <input type="number" class="time-input" id="customHours" min="0" max="23" value="0">
+                <button class="btn-stepper" onclick="adjustTime('customHours', -1, 23)">▼</button>
+                <span class="time-unit-label">Std</span>
+              </div>
+              <span class="time-sep">:</span>
+              <div class="time-unit">
+                <button class="btn-stepper" onclick="adjustTime('customMinutes', 1, 59)">▲</button>
+                <input type="number" class="time-input" id="customMinutes" min="0" max="59" value="5">
+                <button class="btn-stepper" onclick="adjustTime('customMinutes', -1, 59)">▼</button>
+                <span class="time-unit-label">Min</span>
+              </div>
+              <span class="time-sep">:</span>
+              <div class="time-unit">
+                <button class="btn-stepper" onclick="adjustTime('customSeconds', 1, 59)">▲</button>
+                <input type="number" class="time-input" id="customSeconds" min="0" max="59" value="0">
+                <button class="btn-stepper" onclick="adjustTime('customSeconds', -1, 59)">▼</button>
+                <span class="time-unit-label">Sek</span>
+              </div>
+            </div>
+            <div class="custom-actions">
+              <button class="btn btn-primary" onclick="startCustomTimer()">▶ Starten</button>
+              <button class="btn btn-secondary" onclick="saveCustomAsPreset()">💾 Speichern</button>
+            </div>
+          </div>
+        </section>
+
+      </div><!-- /right-panel -->
+    </div><!-- /content -->
+  </div><!-- /app -->
+
+  <!-- ── Alarm overlay ──────────────────────────────────── -->
+  <div class="overlay alarm-overlay" id="alarmOverlay" style="display:none" role="dialog" aria-modal="true">
+    <div class="alarm-box">
+      <div class="alarm-icon">⏰</div>
+      <h2 class="alarm-title">Zeit ist um!</h2>
+      <p class="alarm-timer-name" id="alarmTimerName"></p>
+      <div class="alarm-extend-row">
+        <button class="btn btn-extend-alarm" onclick="extendAndRestart(300)">+5 Min</button>
+        <button class="btn btn-extend-alarm" onclick="extendAndRestart(600)">+10 Min</button>
+        <button class="btn btn-extend-alarm" onclick="extendAndRestart(1800)">+30 Min</button>
+      </div>
+      <div class="alarm-actions">
+        <button class="btn btn-danger btn-xl" onclick="stopAlarm()">✕ Stoppen</button>
+        <button class="btn btn-success btn-xl" onclick="repeatTimer()">↺ Wiederholen</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── New preset modal ───────────────────────────────── -->
+  <div class="overlay" id="newPresetModal" style="display:none" role="dialog" aria-modal="true">
+    <div class="modal-box">
+      <h2>Timer speichern</h2>
+      <div class="form-group">
+        <label for="newPresetName">Name</label>
+        <input type="text" class="text-input" id="newPresetName" placeholder="z. B. Nudeln kochen" maxlength="40" autocomplete="off">
+      </div>
+      <div class="time-picker">
+        <div class="time-unit">
+          <button class="btn-stepper" onclick="adjustTime('newPresetHours', 1, 23)">▲</button>
+          <input type="number" class="time-input" id="newPresetHours" min="0" max="23" value="0">
+          <button class="btn-stepper" onclick="adjustTime('newPresetHours', -1, 23)">▼</button>
+          <span class="time-unit-label">Std</span>
+        </div>
+        <span class="time-sep">:</span>
+        <div class="time-unit">
+          <button class="btn-stepper" onclick="adjustTime('newPresetMinutes', 1, 59)">▲</button>
+          <input type="number" class="time-input" id="newPresetMinutes" min="0" max="59" value="10">
+          <button class="btn-stepper" onclick="adjustTime('newPresetMinutes', -1, 59)">▼</button>
+          <span class="time-unit-label">Min</span>
+        </div>
+        <span class="time-sep">:</span>
+        <div class="time-unit">
+          <button class="btn-stepper" onclick="adjustTime('newPresetSeconds', 1, 59)">▲</button>
+          <input type="number" class="time-input" id="newPresetSeconds" min="0" max="59" value="0">
+          <button class="btn-stepper" onclick="adjustTime('newPresetSeconds', -1, 59)">▼</button>
+          <span class="time-unit-label">Sek</span>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" onclick="closeModal('newPresetModal')">Abbrechen</button>
+        <button class="btn btn-primary" onclick="saveNewPreset()">Speichern</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Edit preset modal ──────────────────────────────── -->
+  <div class="overlay" id="editPresetModal" style="display:none" role="dialog" aria-modal="true">
+    <input type="hidden" id="editPresetId">
+    <div class="modal-box">
+      <h2>Timer bearbeiten</h2>
+      <div class="form-group">
+        <label for="editPresetName">Name</label>
+        <input type="text" class="text-input" id="editPresetName" maxlength="40" autocomplete="off">
+      </div>
+      <div class="time-picker">
+        <div class="time-unit">
+          <button class="btn-stepper" onclick="adjustTime('editPresetHours', 1, 23)">▲</button>
+          <input type="number" class="time-input" id="editPresetHours" min="0" max="23" value="0">
+          <button class="btn-stepper" onclick="adjustTime('editPresetHours', -1, 23)">▼</button>
+          <span class="time-unit-label">Std</span>
+        </div>
+        <span class="time-sep">:</span>
+        <div class="time-unit">
+          <button class="btn-stepper" onclick="adjustTime('editPresetMinutes', 1, 59)">▲</button>
+          <input type="number" class="time-input" id="editPresetMinutes" min="0" max="59" value="0">
+          <button class="btn-stepper" onclick="adjustTime('editPresetMinutes', -1, 59)">▼</button>
+          <span class="time-unit-label">Min</span>
+        </div>
+        <span class="time-sep">:</span>
+        <div class="time-unit">
+          <button class="btn-stepper" onclick="adjustTime('editPresetSeconds', 1, 59)">▲</button>
+          <input type="number" class="time-input" id="editPresetSeconds" min="0" max="59" value="0">
+          <button class="btn-stepper" onclick="adjustTime('editPresetSeconds', -1, 59)">▼</button>
+          <span class="time-unit-label">Sek</span>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-danger btn-sm" onclick="deletePreset()">🗑 Löschen</button>
+        <button class="btn btn-secondary" onclick="closeModal('editPresetModal')">Abbrechen</button>
+        <button class="btn btn-primary" onclick="updatePreset()">Speichern</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
